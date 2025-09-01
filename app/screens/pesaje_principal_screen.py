@@ -2,6 +2,7 @@ import tkinter as tk
 from datetime import datetime
 import random
 from app.services.scale_service import ScaleService
+from app.clients.svp_client import SvpClient
 
 # Detección de simulación
 try:
@@ -32,6 +33,9 @@ class PantallaPesaje:
 
         self.service = ScaleService()
         self.service.start()
+
+        self.client = SvpClient()
+        self.client.login()  # login inmediato al iniciar la app
 
         if SIMULACION:
             print("Simulación de botón activada")
@@ -173,6 +177,10 @@ class PantallaPesaje:
 
 
     def save_weight(self):
+        cajas = self.client.request("GET", "/api/security/list-users")
+        print(cajas)
+        return 
+
         peso_minimo = 20.00
         # peso = self.service.get_weight()
         peso_actual = self.service.get_weight()

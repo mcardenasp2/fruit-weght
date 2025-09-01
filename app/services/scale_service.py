@@ -2,11 +2,12 @@ import threading
 import socket
 import re
 import time
+from app.core.config import config
 
 class ScaleService:
     def __init__(self):
-        self.ip = '127.0.0.1'
-        self.port = 4001
+        self.ip = config.get("bascula", "ip")
+        self.port = config.get("bascula", "port")
         self.socket = None
         self.current_weight = None
         self.running = False
