@@ -18,13 +18,16 @@ class SvpClient:
         self.username = username or config.get("api", "username")
         self.password = password or config.get("api", "password")
         self.empresa = empresa or config.get("api", "empresa")
+        self.localidad = empresa or config.get("api", "localidad")
         self.empresa_id = None
+        self.localidad_id = None
         self.api_url = config.get("api", "url")
 
 
     def companies(self):
         resp = requests.get(
-            f"{self.api_url}/api/security/companies"
+            f"{self.api_url}/api/security/companies",
+            verify=False
         )
         resp.raise_for_status()
         companies = resp.json()
@@ -37,43 +40,33 @@ class SvpClient:
 
 
     def login(self):
-        if not self.empresa_id:
-            self.companies()
-        """Hace login y obtiene JWT del backend."""
-        resp = requests.post(
-            f"{self.api_url}/api/security/login",
-            data={"username": self.username, "password": self.password, "empresa_id": self.empresa_id},
-            headers={"Accept": "application/json"}
-        )
-
         try:
-            resp.raise_for_status()  # lanza error si no es 2xx
+            if not self.empresa_id:
+                self.companies()
+                self.set_location()
+            resp = requests.post(
+                f"{self.api_url}/api/security/login",
+                data={"username": self.username, "password": self.password, "empresa_id": self.empresa_id},
+                headers={"Accept": "application/json"},
+                verify=False
+            )
+            resp.raise_for_status()
             data = resp.json()
-        except requests.HTTPError as e:
-            print(f"[ERROR] Login fallido. Status: {resp.status_code}")
-            print(resp.text)
-            raise Exception("Login fallido: usuario o contraseña incorrectos") from e
-        except ValueError:
-            print("[ERROR] El servidor no devolvió JSON válido")
-            print(resp.text)
-            raise
 
-        if not data.get("success"):
-            raise Exception(f"Error de login: {data}")
+            if not data.get("success"):
+                raise Exception(f"Error de login: {data}")
 
-        token_data = data["data"]
+            token_data = data["data"]
+            self.token = token_data["token"]
+            login_time_days = token_data.get("login_time", 15)
+            self.token_expiration = time.time() + login_time_days * 86400
+            print(f"[OK] Logged in as {self.username}. Token valid for {login_time_days} days.")
 
-        self.token = token_data["token"]
-        
-        # login_time viene en días, convertimos a timestamp
-        login_time_days = token_data.get("login_time", 15)
-        # login_time_days = 60
-        # print(f"TOK {self.token}")
-        print(f"login_time_days {login_time_days}")
-        print("----------------------------------------------------------------------------")
-        self.token_expiration = time.time() + login_time_days * 86400
-        # self.token_expiration = time.time() + login_time_days
-        print(f"[OK] Logged in as {self.username}. Token valid for {login_time_days} days.")
+        except Exception as e:
+            print(f"[WARN] No se pudo conectar a la API: {e}")
+            self.token = None
+            self.token_expiration = None
+
 
     def ensure_token_valid(self):
         # print(f"token: {self.token}")
@@ -83,18 +76,50 @@ class SvpClient:
             self.login()
 
     def request(self, method, endpoint, **kwargs):
-        """Hace request seguro, renueva token si es necesario."""
-        self.ensure_token_valid()
-        headers = kwargs.pop("headers", {})
-        headers["Authorization"] = f"Bearer {self.token}"
-        resp = requests.request(method, f"{self.api_url}{endpoint}", headers=headers, **kwargs)
-
-        # Si Laravel devuelve 401, relogear y reintentar
-        if resp.status_code == 401:
-            print("[WARN] Received 401, re-login...")
-            self.login()
-            headers["Authorization"] = f"Bearer {self.token}"
+        try:
+            self.ensure_token_valid()
+            headers = kwargs.pop("headers", {})
+            headers["Authorization"] = f"Bearer {self.token}" if self.token else ""
             resp = requests.request(method, f"{self.api_url}{endpoint}", headers=headers, **kwargs)
 
-        resp.raise_for_status()
-        return resp.json()
+            if resp.status_code == 401:
+                print("[WARN] Received 401, re-login...")
+                self.login()
+                headers["Authorization"] = f"Bearer {self.token}" if self.token else ""
+                resp = requests.request(method, f"{self.api_url}{endpoint}", headers=headers, **kwargs)
+
+            resp.raise_for_status()
+            return resp.json()
+
+        except Exception as e:
+            print(f"[WARN] Request fallido, se ignorará temporalmente: {e}")
+            return None
+        
+
+    def set_location(self):
+        try:
+            resp = requests.get(
+                f"{self.api_url}/api/security/locations?per_page=all",
+                verify=False
+            )  
+
+            resp.raise_for_status()
+            locations = resp.json()
+
+            print(f"Locations: {locations}")
+
+            if not locations.get("success"):
+                raise Exception(f"Error de login: {locations}")
+            
+            location = next((c for c in locations if c["nombre"] == self.localidad), None)
+            if not location:
+                raise ValueError(f"No se encontró la empresa '{self.localidad}' en la API.")
+            self.localidad_id = location["id"]
+
+            print(f"LOCALIDAD ID: {self.localidad_id}")
+
+        except Exception as e:
+            print(f"[WARN] No se pudo conectar a la API: {e}")
+        
+            
+            

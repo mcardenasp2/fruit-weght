@@ -35,7 +35,11 @@ class PantallaPesaje:
         self.service.start()
 
         self.client = SvpClient()
-        self.client.login()  # login inmediato al iniciar la app
+        try:
+            self.client.login()  # intenta login, pero no rompe si falla
+        except Exception:
+            print("[INFO] Iniciando app sin conexión a API.")
+
 
         if SIMULACION:
             print("Simulación de botón activada")
@@ -177,9 +181,9 @@ class PantallaPesaje:
 
 
     def save_weight(self):
-        cajas = self.client.request("GET", "/api/security/list-users")
-        print(cajas)
-        return 
+        # cajas = self.client.request("GET", "/api/security/list-users")
+        # print(cajas)
+        # return 
 
         peso_minimo = 20.00
         # peso = self.service.get_weight()
