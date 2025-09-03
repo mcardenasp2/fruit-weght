@@ -3,6 +3,7 @@ from datetime import datetime
 import random
 from app.services.scale_service import ScaleService
 from app.clients.svp_client import SvpClient
+from app.services.cloud_sync_carta_corte_service import CloudSyncCartaCorteService
 
 # Detección de simulación
 try:
@@ -34,11 +35,13 @@ class PantallaPesaje:
         self.service = ScaleService()
         self.service.start()
 
-        self.client = SvpClient()
+        self.cloud_service = CloudSyncCartaCorteService()
+
+        # intento sincronizar cloud -> local
         try:
-            self.client.login()  # intenta login, pero no rompe si falla
+            self.cloud_service.sync_carta_corte()
         except Exception:
-            print("[INFO] Iniciando app sin conexión a API.")
+            print("[INFO] Sincronización cloud no disponible")
 
 
         if SIMULACION:
