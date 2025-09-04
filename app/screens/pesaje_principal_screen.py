@@ -39,9 +39,10 @@ class PantallaPesaje:
 
         # intento sincronizar cloud -> local
         try:
-            self.cloud_service.sync_carta_corte()
-        except Exception:
-            print("[INFO] Sincronización cloud no disponible")
+            print("[INFO] Iniciando sincronización cloud...")
+            self.cloud_service.sync_all()
+        except Exception as e:
+            print(f"[INFO] Sincronización cloud no disponible {e}")
 
 
         if SIMULACION:
