@@ -5,27 +5,32 @@ class CartaCorteRepository:
     def __init__(self):
         self.db = Database()
 
-    def update_indicated_weight(self, *args):
-        peso_id, caja_id, peso_minimo, peso_maximo = args
+
+    def update_status_indicated_weights_all(self):
         query = """
             UPDATE pe_pesos_indicados
-            SET caja_id = ?, peso_minimo = ?, peso_maximo = ?
+            SET estado = 0
+        """
+        self.db.execute(query)
+
+    
+    def update_status_indicated_weight(self, peso_id):
+        query = """
+            UPDATE pe_pesos_indicados
+            SET estado = 1
             WHERE id = ?
         """
-        self.db.execute(query, (caja_id, peso_minimo, peso_maximo, peso_id), fetch=True)
+        self.db.execute(query, (peso_id,))
+        
 
 
-    def create_indicated_weight(self, *args):
-        peso_id, caja_id, peso_minimo, peso_maximo = args
+    def create_indicated_weight(self, caja_id, peso_minimo, peso_maximo, peso_ideal, tara):
         query = """
-            INSERT INTO pe_pesos_indicados (id, caja_id, peso_minimo, peso_maximo)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                caja_id = excluded.caja_id,
-                peso_minimo = excluded.peso_minimo,
-                peso_maximo = excluded.peso_maximo
+            INSERT INTO pe_pesos_indicados (caja_id, peso_minimo, peso_maximo, peso_ideal, tara, estado)
+            VALUES (%s, %s, %s, %s, %s, 1)
         """
-        self.db.execute(query, (peso_id, caja_id, peso_minimo, peso_maximo))
+        self.db.execute(query, (caja_id, peso_minimo, peso_maximo, peso_ideal, tara))
+
 
 
     def get_indicated_weight(self):
@@ -35,12 +40,15 @@ class CartaCorteRepository:
                 c.id AS caja_id,
                 c.descripcion AS caja,
                 pi.peso_minimo,
-                pi.peso_maximo
+                pi.peso_maximo,
+                pi.peso_ideal,
+                pi.tara
             FROM pe_pesos_indicados pi
             JOIN cajas c ON c.id = pi.caja_id
         """
-        cursor = self.db.execute(query)
-        return cursor.fetchall()
+        data = self.db.execute(query, fetch=True)
+        return data or []
+        
 
 
 

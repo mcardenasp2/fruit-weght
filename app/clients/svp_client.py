@@ -85,6 +85,7 @@ class SvpClient:
                 if data["expires_at"] > time.time():
                     self.token = data["token"]
                     self.token_expiration = data["expires_at"]
+                    self.localidad_id = data["localidad_id"]
                     print("[INFO] Token cargado desde cache.")
                     return True
         return False
@@ -94,6 +95,7 @@ class SvpClient:
             json.dump({
                 "token": self.token,
                 "expires_at": self.token_expiration,
+                "localidad_id": self.localidad_id
             }, f)
 
     # ------------------------
@@ -142,19 +144,17 @@ class SvpClient:
     # ------------------------
     def set_location(self):
         try:
-            resp = requests.get(f"{self.api_url}/api/security/locations?per_page=all", verify=False)
-            resp.raise_for_status()
-            locations = resp.json()
+            print(f"{self.api_url}/api/security/locations?per_page=all")
+            locations = self.request('GET',f"{self.api_url}/api/security/locations?per_page=all", verify=False)
+            
+            if locations:
+                location = next((c for c in locations if c["descripcion"] == self.localidad), None)
+                if not location:
+                    raise ValueError(f"No se encontró la localidad '{self.localidad}' en la API.")
 
-            if not locations.get("success"):
-                raise Exception(f"Error de login: {locations}")
+                self.localidad_id = location["id"]
 
-            location = next((c for c in locations if c["nombre"] == self.localidad), None)
-            if not location:
-                raise ValueError(f"No se encontró la localidad '{self.localidad}' en la API.")
-
-            self.localidad_id = location["id"]
             print(f"[INFO] Localidad seleccionada: {self.localidad} (ID={self.localidad_id})")
 
         except Exception as e:
-            print(f"[WARN] No se pudo conectar a la API: {e}")
+            print(f"[WARN] No se pudo conectar a la API Localidad: {e}")

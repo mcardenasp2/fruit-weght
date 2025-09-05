@@ -15,20 +15,17 @@ class CalidadCajaRepository:
             FROM calidad_cajas 
             WHERE estado = 1"""
         
-        resultado = self.db.execute(query)
-        return resultado[0] if resultado else []
+        resultado = self.db.execute(query, fetch = True)
+        return resultado if resultado else []
     
     
     def create_quality_box(self, descripcion, observacion):
-
         observacion = observacion or None
-        observacion = 'Prueba'
-        print(f"Descripcion: {descripcion}, Observacion: {observacion}")
         query = """
             INSERT INTO calidad_cajas (descripcion, observacion, estado)
             VALUES (%s, %s, %s)
         """
-        self.db.execute(query, (descripcion, observacion, 1), fetch=True)
+        self.db.execute(query, (descripcion, observacion, 1), fetch=False)
 
 
     def update_quality_boxes_all(self):
@@ -43,6 +40,6 @@ class CalidadCajaRepository:
         query = """
             UPDATE calidad_cajas
             SET estado = 1
-            WHERE id = ?
+            WHERE id = %s
         """
-        self.db.execute(query, (id))
+        self.db.execute(query, (id, ), fetch=False)

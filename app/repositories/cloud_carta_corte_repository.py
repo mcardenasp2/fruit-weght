@@ -11,7 +11,7 @@ class CloudCartaCorteRepository:
     
 
     def boxes_by_location(self):
-        data = self.svp_client.request("GET", f"/api/banprod/crud/caja-localidad/{self.svp_client.localidad_id}",  verify=False)
+        data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/banprod/crud/caja-localidad/{self.svp_client.localidad_id}",  verify=False)
         return data or []
     
 
@@ -27,6 +27,6 @@ class CloudCartaCorteRepository:
     
 
     def get_indicated_weight(self):
-        data = self.svp_client.request("GET", f"/api/indicated-weight/{self.svp_client.localidad_id}",  verify=False)
+        data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/pesaje/peso-indicado/{self.svp_client.localidad_id}",  verify=False)
         return data or []
     
