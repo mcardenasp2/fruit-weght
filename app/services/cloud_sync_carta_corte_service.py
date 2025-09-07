@@ -7,7 +7,7 @@ from app.repositories.peso_indicado_repository import PesoIndicadoRepository
 from psycopg2.extras import RealDictCursor
 from psycopg2.extras import RealDictRow
 
-from datetime import date
+from datetime import datetime
 
 class CloudSyncCartaCorteService:
     def __init__(self):
@@ -19,10 +19,6 @@ class CloudSyncCartaCorteService:
         except Exception:
             self.client = None
 
-
-        
-
-        print(f"client> {self.client.localidad_id}")
         self.cloud_carta_corte_repo = CloudCartaCorteRepository(self.client)
         self.carta_corte_repo = CartaCorteRepository()
         self.calidad_cajas_repo = CalidadCajaRepository()
@@ -253,36 +249,124 @@ class CloudSyncCartaCorteService:
     
     def sync_carta_corte(self):
         print("Sincronizando carta de corte...")
-        hoy = date.today()
-        fecha_str = hoy.strftime("%Y-%m-%d")
+        ahora = datetime.now()
+        fecha_str = ahora.strftime("%Y-%m-%d")
+        hora_str = ahora.strftime("%H:%M:%S")
 
-        details = self.cloud_carta_corte_repo.get_cutting_letter_header(fecha_str)
+        cutting_chart_detail_cloud = self.cloud_carta_corte_repo.get_cutting_letter_header(fecha_str)
+        # print(f"cutting_chart_detail_cloud: {cutting_chart_detail_cloud}")
+        # return 
+        cutting_chart_detail_local = self.carta_corte_repo.get_cut_off_letter_details(fecha_str)
+        peso_indicados_local = self.peso_indicado_repo.get_indicated_weight()
 
-        if details:
-            # Actualiza Carta de Corte a cero todo
-            pass
+        cut_off_letter = self.carta_corte_repo.get_cut_off_letter(fecha_str)
 
-        for detail in details:
-            data_details = {
-                "nombre_peso_indicado" : detail["nombre_peso_indicado"],
-                "cantidad": detail["cantidad"],
-                "estado": detail["estado"],
+        
+
+        if cutting_chart_detail_cloud:
+            self.carta_corte_repo.update_cut_off_chart_by_date(fecha_str)
+
+            if cut_off_letter is None:
+                cut_off_letter = self.carta_corte_repo.save_cut_off_chart(
+                    localidad_id = self.client.localidad_id,
+                    fecha = fecha_str,
+                    hora = cutting_chart_detail_cloud[0]["hora"]
+                )
+           
+        cutting_chart_detail_cloud = [
+            {
+                "caja": row["caja"],
+                "calidad_caja" : row["calidad_caja"],
+                "cantidad" : row["cantidad"],
+                "fecha" : row["fecha"],
+                "hora" : row["hora"],
+                "peso_minimo" : row["peso_minimo"],
+                "peso_ideal" : row["peso_ideal"],
+                "peso_maximo" : row["peso_maximo"],
+                "tara" : row["tara"],
             }
-    
-        header_data = {
-            "fecha": carta_corte["fecha"],
-            "localidad_id": carta_corte["localidad_id"],
-            "hora": carta_corte["hora"],
-            "detalles": data_details
-        }
+            for row in cutting_chart_detail_cloud
+        ]
 
-            # self.carta_corte_repo.save_cut_off_chart(header_data)
+        cutting_chart_detail_local = [
+            {
+                "corte_detalle_id": row["corte_detalle_id"],
+                "caja": row["caja"],
+                "calidad_caja" : row["calidad_caja"],
+                "cantidad" : row["cantidad"],
+                "fecha" : row["fecha"],
+                "peso_minimo" : row["peso_minimo"],
+                "peso_ideal" : row["peso_ideal"],
+                "peso_maximo" : row["peso_maximo"],
+                "tara" : row["tara"],
+            }
+            for row in cutting_chart_detail_local
+        ]
+
+        peso_indicados_local = [
+            {
+                "peso_indicado_id": row["peso_indicado_id"],
+                "caja": row["caja"],
+                "peso_minimo": row["peso_minimo"],
+                "peso_ideal": row["peso_ideal"],
+                "peso_maximo": row["peso_maximo"],
+                "calidad_caja": row["calidad_caja"],
+                "tara": row["tara"]
+            }
+            for row in peso_indicados_local
+        ]
+        for cloud in cutting_chart_detail_cloud:
+            match = next(
+                (
+                    local for local in cutting_chart_detail_local
+                    if local["caja"] == cloud["caja"]
+                    and local["calidad_caja"] == cloud["calidad_caja"]
+                    and float(local["cantidad"]) == float(cloud["cantidad"])
+                    and float(local["peso_minimo"]) == float(cloud["peso_minimo"])
+                    and float(local["peso_ideal"]) == float(cloud["peso_ideal"])
+                    and float(local["peso_maximo"]) == float(cloud["peso_maximo"])
+                    and int(local["cantidad"]) == int(cloud["cantidad"])
+                    and local["tara"] == cloud["tara"]
+                ),
+                None
+            )
+
+
+            if match:
+                print("match pure")
+                self.carta_corte_repo.updateStatusCutDeatil(match["corte_detalle_id"])
+
+            else:
+                match_peso_indicado = next(
+                    (
+                        local for local in peso_indicados_local
+                        if local["caja"] == cloud["caja"]
+                        and float(local["peso_minimo"]) == float(cloud["peso_minimo"])
+                        and float(local["peso_ideal"]) == float(cloud["peso_ideal"])
+                        and float(local["peso_maximo"]) == float(cloud["peso_maximo"])
+                        and local["calidad_caja"] == cloud["calidad_caja"]
+                        and local["tara"] == cloud["tara"]
+                    ),
+                    None
+                )
+
+                if match_peso_indicado:
+                    print(f"Peso idnicado: {match_peso_indicado}")
+                    self.carta_corte_repo.save_cutting_detail(
+                        corte_encabezado_id = cut_off_letter["id"],
+                        peso_indicado_id = match_peso_indicado["peso_indicado_id"],
+                        cantidad = cloud["cantidad"]
+                    )
+                else:
+                    print("No se encontró peso indicado correspondiente, no se puede crear detalle de")
+
+
     
 
 
     def sync_all(self):
-        # self.sync_quality_boxes()
-        # self.sync_boxes()
-        # self.sync_indicated_weight()
+        self.sync_quality_boxes()
+        self.sync_boxes()
+        self.sync_indicated_weight()
         self.sync_carta_corte()
         

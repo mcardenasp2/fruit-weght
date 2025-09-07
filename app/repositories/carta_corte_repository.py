@@ -6,15 +6,65 @@ class CartaCorteRepository:
         self.db = Database()
 
 
-    def get_cut_off_letter(self):
-        date = self.db.execute("SELECT date('now')").fetchone()[0]
+
+    def get_cut_off_letter(self, fecha_str = None):
         query = """
-            select id from pe_cortes where fecha = ? and estado = 1
+            select * 
+            from pe_cortes_encabezados
+            where fecha = %s
+            limit 1
         """
-        cursor = self.db.execute(query, (date,))
-        return cursor.fetchone()
+        data = self.db.execute(query, (fecha_str,), fetch=True)
+        return data[0] if data else None
+
+        
+    def get_cut_off_letter_details(self, fecha_str=None):
+        query = """
+            select
+            pcd.id corte_detalle_id,
+            c.descripcion caja,
+            cc.descripcion calidad_caja,
+            pcd.cantidad ,
+            pce.fecha,
+            ppi.peso_ideal ,
+            ppi.peso_maximo ,
+            ppi.peso_minimo ,
+            ppi.tara
+            from public.pe_cortes_detalles pcd 
+            join public.pe_cortes_encabezados pce on pcd.corte_encabezado_id = pce.id 
+            join public.pe_pesos_indicados ppi on ppi.id = pcd.peso_indicado_id 
+            join public.cajas c on c.id = ppi.caja_id 
+            join public.calidad_cajas cc on cc.id = c.calidad_id 
+            where pcd.estado = 1 and pce.fecha = %s
+            order by c.descripcion, cc.descripcion
+        """
+        cursor = self.db.execute(query, (fecha_str,), fetch=True)
+        return cursor if cursor else []
     
+
+    def update_cut_off_chart_by_date(self, fecha_str):
+        query = """
+            UPDATE pe_cortes_detalles
+            SET estado = 0
+            where corte_encabezado_id in (
+                select id from pe_cortes_encabezados where fecha = %s)
+                
+        """
+        self.db.execute(query, (fecha_str,))
+
+
+
+    def updateStatusCutDeatil(self, corte_detalle_id):
+        query = """
+            Update pe_cortes_detalles
+            set estado = 1
+            where id = %s
+            """
+        self.db.execute(query, (corte_detalle_id,))
+
     
+
+
     def get_cutting_details(self, corte_id):
         query = """
             SELECT
@@ -34,49 +84,25 @@ class CartaCorteRepository:
 
 
 
-    def save_cut_off_chart(self, *args):
-        detalles, fecha, localidad_id, hora = args
-
-        try:
-            conn = self.db  # tu conexión (sqlite3.connect o similar)
-            cursor = conn.cursor()
-
-            # iniciar transacción
-            cursor.execute("BEGIN")
-
-            # insertar cabecera
-            query = """
-                INSERT INTO pe_cortes (fecha, localidad_id, hora)
-                VALUES (?, ?, ?)
-            """
-            cursor.execute(query, (fecha, localidad_id, hora))
-            corte_id = cursor.lastrowid
-
-            # insertar detalles
-            for detalle in detalles:
-                self.save_cutting_detail(cursor, corte_id, detalle)
-
-            # confirmar cambios
-            conn.commit()
-            return corte_id
-
-        except Exception as e:
-            conn.rollback()
-            print(f"[ERROR] No se pudo guardar el corte: {e}")
-            return None
-
-
-    def save_cutting_detail(self, cursor, corte_id, detalle):
+    def save_cut_off_chart(self, localidad_id, fecha, hora):
         query = """
-            INSERT INTO pe_cortes_detalles (corte_id, nombre_peso_indicado, cantidad, estado)
-            VALUES (?, ?, ?, ?)
+        INSERT INTO pe_cortes_encabezados (localidad_id, fecha, hora)
+            VALUES (%s, %s, %s)
+            returning *
+            """
+        data = self.db.execute(query,(localidad_id, fecha, hora), fetch=True)
+        return data[0] if data else None
+
+
+
+    def save_cutting_detail(self, corte_encabezado_id, peso_indicado_id, cantidad):
+        query = """
+            INSERT INTO pe_cortes_detalles (corte_encabezado_id, peso_indicado_id, cantidad, estado)
+            VALUES (%s, %s, %s, %s)
         """
-        cursor.execute(query, (
-            corte_id,
-            detalle["nombre_peso_indicado"],
-            detalle["cantidad"],
-            detalle["estado"]
-        ))
+        self.db.execute(query, (corte_encabezado_id, peso_indicado_id, cantidad, 1))
+
+
 
 
     def save_weight(self, *args):
