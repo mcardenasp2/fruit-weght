@@ -15,16 +15,11 @@ class CloudCartaCorteRepository:
         return data or []
     
 
-    def get_cutting_letter_header(self, date):
-        data = self.svp_client.request("GET", f"/api/cutting-chart/header/{self.svp_client.localidad_id}/{date}",  verify=False)
+    def get_cutting_letter_header(self, fecha_str):
+        print(f"date {fecha_str}")
+        data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/pesaje/carta-corte-localidad/{fecha_str}/{self.svp_client.localidad_id}",  verify=False)
         return data or None
 
-
-
-    def get_cutting_chart_detail(self, header_id):
-        data = self.svp_client.request("GET", f"/api/cutting-chart/detail/{header_id}",  verify=False)
-        return data or []
-    
 
     def get_indicated_weight(self):
         data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/pesaje/peso-indicado/{self.svp_client.localidad_id}",  verify=False)

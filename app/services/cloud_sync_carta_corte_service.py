@@ -3,6 +3,7 @@ from app.repositories.cloud_carta_corte_repository import CloudCartaCorteReposit
 from app.repositories.carta_corte_repository import CartaCorteRepository
 from app.repositories.calidad_caja_repository import CalidadCajaRepository
 from app.repositories.caja_repository import CajaRepository
+from app.repositories.peso_indicado_repository import PesoIndicadoRepository
 from psycopg2.extras import RealDictCursor
 from psycopg2.extras import RealDictRow
 
@@ -11,16 +12,22 @@ from datetime import date
 class CloudSyncCartaCorteService:
     def __init__(self):
         try:
-            client = SvpClient()
+            self.client = SvpClient()
             # Intenta cargar desde cache
-            if not client.load_token_from_cache():
-                client.login()  # si no hay cache o está expirado, hace login
+            if not self.client.load_token_from_cache():
+                self.client.login()  # si no hay cache o está expirado, hace login
         except Exception:
-            client = None
-        self.cloud_carta_corte_repo = CloudCartaCorteRepository(client)
+            self.client = None
+
+
+        
+
+        print(f"client> {self.client.localidad_id}")
+        self.cloud_carta_corte_repo = CloudCartaCorteRepository(self.client)
         self.carta_corte_repo = CartaCorteRepository()
         self.calidad_cajas_repo = CalidadCajaRepository()
         self.caja_repo = CajaRepository()
+        self.peso_indicado_repo = PesoIndicadoRepository()
 
 
 
@@ -141,11 +148,9 @@ class CloudSyncCartaCorteService:
 
     def sync_indicated_weight(self):
         peso_indicados_cloud = self.cloud_carta_corte_repo.get_indicated_weight()
-        peso_indicados_local = self.carta_corte_repo.get_indicated_weight()
+        peso_indicados_local = self.peso_indicado_repo.get_indicated_weight()
 
-        # print(f"peso_indicados_local: {peso_indicados_local}")
-
-        # return
+        
         cajas_local = self.caja_repo.get_all_boxes()
 
         cajas_local = [
@@ -159,7 +164,7 @@ class CloudSyncCartaCorteService:
 
 
         if peso_indicados_cloud:
-            self.carta_corte_repo.update_status_indicated_weights_all()
+            self.peso_indicado_repo.update_status_indicated_weights_all()
 
         peso_indicados_cloud = [
             {
@@ -175,6 +180,8 @@ class CloudSyncCartaCorteService:
 
         
 
+        
+
         peso_indicados_local = [
             {
                 "peso_indicado_id": row["peso_indicado_id"],
@@ -182,10 +189,13 @@ class CloudSyncCartaCorteService:
                 "peso_minimo": row["peso_minimo"],
                 "peso_ideal": row["peso_ideal"],
                 "peso_maximo": row["peso_maximo"],
+                "calidad_caja": row["calidad_caja"],
                 "tara": row["tara"]
             }
             for row in peso_indicados_local
         ]
+
+        
 
      
 
@@ -193,21 +203,28 @@ class CloudSyncCartaCorteService:
         for cloud in peso_indicados_cloud:
             # Buscar registro local que coincida en todos los campos clave
             match = next(
-                (
-                    local for local in peso_indicados_local
-                    if local["caja"] == cloud["caja"]
-                    and local["peso_minimo"] == cloud["peso_minimo"]
-                    and local["peso_ideal"] == cloud["peso_ideal"]
-                    and local["peso_maximo"] == cloud["peso_maximo"]
-                    and local["tara"] == cloud["tara"]
-                ),
-                None
-            )
+            (
+                local for local in peso_indicados_local
+                if local["caja"] == cloud["caja"]
+                and float(local["peso_minimo"]) == float(cloud["peso_minimo"])
+                and float(local["peso_ideal"]) == float(cloud["peso_ideal"])
+                and float(local["peso_maximo"]) == float(cloud["peso_maximo"])
+                and local["calidad_caja"] == cloud["calidad_caja"]
+                and local["tara"] == cloud["tara"]
+            ),
+            None
+        )
+
+
+            print(f"cloud {cloud}")
+            print(f"peso_indicados_local {peso_indicados_local}")
+
+            print(f"match {match}")
 
             if match:
                 # Existe registro idéntico → no hacer nada
 
-                self.carta_corte_repo.update_status_indicated_weight(match["peso_indicado_id"])
+                self.peso_indicado_repo.update_status_indicated_weight(match["peso_indicado_id"])
 
             else:
                 match_caja = next(
@@ -220,45 +237,52 @@ class CloudSyncCartaCorteService:
                 )
 
                 if match_caja:
+                    print("Crear")
                     # Actualizar o insertar según convenga
-                    self.carta_corte_repo.create_indicated_weight(
+                    self.peso_indicado_repo.create_indicated_weight(
                         caja_id=match_caja["id"],
                         peso_minimo=cloud["peso_minimo"],
                         peso_maximo=cloud["peso_maximo"],
                         peso_ideal=cloud["peso_ideal"],
-                        tara=cloud["tara"]
+                        tara=cloud["tara"],
+                        localidad_id = self.client.localidad_id
                     )
 
 
         
     
     def sync_carta_corte(self):
+        print("Sincronizando carta de corte...")
         hoy = date.today()
-        date = hoy.strftime("%Y-%m-%d")
-        carta_corte = self.cloud_carta_corte_repo.get_cutting_letter_header(date)
-        if carta_corte:
-            details = self.cloud_carta_corte_repo.get_cutting_chart_detail(carta_corte["id"])
-            for detail in details:
-                data_details = {
-                    "nombre_peso_indicado" : detail["nombre_peso_indicado"],
-                    "cantidad": detail["cantidad"],
-                    "estado": detail["estado"],
-                }
-        
-            header_data = {
-                "fecha": carta_corte["fecha"],
-                "localidad_id": carta_corte["localidad_id"],
-                "hora": carta_corte["hora"],
-                "detalles": data_details
-            }
+        fecha_str = hoy.strftime("%Y-%m-%d")
 
-            self.carta_corte_repo.save_cut_off_chart(header_data)
+        details = self.cloud_carta_corte_repo.get_cutting_letter_header(fecha_str)
+
+        if details:
+            # Actualiza Carta de Corte a cero todo
+            pass
+
+        for detail in details:
+            data_details = {
+                "nombre_peso_indicado" : detail["nombre_peso_indicado"],
+                "cantidad": detail["cantidad"],
+                "estado": detail["estado"],
+            }
+    
+        header_data = {
+            "fecha": carta_corte["fecha"],
+            "localidad_id": carta_corte["localidad_id"],
+            "hora": carta_corte["hora"],
+            "detalles": data_details
+        }
+
+            # self.carta_corte_repo.save_cut_off_chart(header_data)
     
 
 
     def sync_all(self):
         # self.sync_quality_boxes()
         # self.sync_boxes()
-        self.sync_indicated_weight()
-        # self.sync_carta_corte()
+        # self.sync_indicated_weight()
+        self.sync_carta_corte()
         

@@ -6,52 +6,6 @@ class CartaCorteRepository:
         self.db = Database()
 
 
-    def update_status_indicated_weights_all(self):
-        query = """
-            UPDATE pe_pesos_indicados
-            SET estado = 0
-        """
-        self.db.execute(query)
-
-    
-    def update_status_indicated_weight(self, peso_id):
-        query = """
-            UPDATE pe_pesos_indicados
-            SET estado = 1
-            WHERE id = ?
-        """
-        self.db.execute(query, (peso_id,))
-        
-
-
-    def create_indicated_weight(self, caja_id, peso_minimo, peso_maximo, peso_ideal, tara):
-        query = """
-            INSERT INTO pe_pesos_indicados (caja_id, peso_minimo, peso_maximo, peso_ideal, tara, estado)
-            VALUES (%s, %s, %s, %s, %s, 1)
-        """
-        self.db.execute(query, (caja_id, peso_minimo, peso_maximo, peso_ideal, tara))
-
-
-
-    def get_indicated_weight(self):
-        query = """
-            SELECT
-                pi.id AS peso_indicado_id,
-                c.id AS caja_id,
-                c.descripcion AS caja,
-                pi.peso_minimo,
-                pi.peso_maximo,
-                pi.peso_ideal,
-                pi.tara
-            FROM pe_pesos_indicados pi
-            JOIN cajas c ON c.id = pi.caja_id
-        """
-        data = self.db.execute(query, fetch=True)
-        return data or []
-        
-
-
-
     def get_cut_off_letter(self):
         date = self.db.execute("SELECT date('now')").fetchone()[0]
         query = """
