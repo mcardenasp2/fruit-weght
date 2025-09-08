@@ -3,17 +3,14 @@ from app.repositories.carta_corte_repository import CartaCorteRepository
 from datetime import datetime
 
 class CartaCorteService:
-    def __init__(self, cloud_sync_carta_corte_service):
+    def __init__(self):
         self.carta_corte_repository = CartaCorteRepository()
-        self.cloud_sync_carta_corte_service = cloud_sync_carta_corte_service
 
 
-    def get_cut_off_chart_details(self):
-        corte = self.carta_corte_repository.get_cut_off_letter()
-        if corte is None:
-            return []
-        
-        detalles = self.carta_corte_repository.get_cutting_details(corte["id"])
+    def get_cut_off_letter_details(self):
+        ahora = datetime.now()
+        fecha_str = ahora.strftime("%Y-%m-%d")
+        detalles = self.carta_corte_repository.get_cut_off_letter_details(fecha_str)
         return detalles
     
     

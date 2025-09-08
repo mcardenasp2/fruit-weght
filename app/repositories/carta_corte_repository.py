@@ -54,13 +54,13 @@ class CartaCorteRepository:
 
 
 
-    def updateStatusCutDeatil(self, corte_detalle_id):
+    def updateStatusCutDeatil(self, corte_detalle_id, cantidad):
         query = """
             Update pe_cortes_detalles
-            set estado = 1
+            set estado = 1, cantidad = %s
             where id = %s
             """
-        self.db.execute(query, (corte_detalle_id,))
+        self.db.execute(query, (cantidad, corte_detalle_id,))
 
     
 

@@ -17,7 +17,7 @@ class CloudCartaCorteRepository:
 
     def get_cutting_letter_header(self, fecha_str):
         data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/pesaje/carta-corte-localidad/{fecha_str}/{self.svp_client.localidad_id}",  verify=False)
-        return data or None
+        return data or []
 
 
     def get_indicated_weight(self):
