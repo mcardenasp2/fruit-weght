@@ -6,11 +6,13 @@ from app.screens.pesaje_principal_screen import PantallaPesaje
 
 def main():
     scale = ScaleService()
+    scale.start() 
     carta = CartaCorteService()
     cloud = CloudSyncCartaCorteService()
     controller = PesajeController(scale, carta, cloud)
     app = PantallaPesaje(controller=controller)
     app.run()
+    scale.stop()
 
 
 if __name__ == "__main__":

@@ -105,12 +105,13 @@ class CartaCorteRepository:
 
 
 
-    def save_weight(self, *args):
-        corte_detalle_id, cantidad, fecha, hora = args
+    def save_weight(self, corte_detalle_id, cantidad, fecha, hora ):
         query = """
-             insert into pe_cortes_detalles (corte_detalle_id, cantidad, fecha, hora)
-                values (?, ?, ?, ?)
+             insert into pe_pesos (corte_detalle_id, cantidad, fecha, hora)
+                values (%s, %s, %s, %s)
+            returning *
             """
-        self.db.execute(query, (corte_detalle_id, cantidad, fecha, hora))
+        data = self.db.execute(query, (corte_detalle_id, cantidad, fecha, hora), fetch=True)
+        return data[0] if data else None
     
     

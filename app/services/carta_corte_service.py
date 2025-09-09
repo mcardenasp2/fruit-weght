@@ -14,12 +14,15 @@ class CartaCorteService:
         return detalles
     
     
-    def save_weight(self, corte_detalle_id, cantidad):
-        ahora = datetime.now()
-        fecha = ahora.strftime("%Y-%m-%d")
-        hora = ahora.strftime("%H:%M:%S")
+    def save_weight(self, register):
         # llamar al repositorio pasando corte_detalle_id, cantidad, fecha y hora
-        self.carta_corte_repository.save_weight(corte_detalle_id, cantidad, fecha, hora)
+        data = self.carta_corte_repository.save_weight(
+            corte_detalle_id= register["corte_detalle_id"],
+            cantidad=register["cantidad"],
+            fecha = register["fecha"],
+            hora = register["hora"],
+        )
+        return data 
 
 
 

@@ -54,8 +54,8 @@ class PantallaPesaje:
 
         self.esperando_vacio = False
 
-        self.service = ScaleService()
-        self.service.start()
+        # self.service = ScaleService()
+        # self.service.start()
 
         # self.cloud_service = CloudSyncCartaCorteService()
 
@@ -218,33 +218,53 @@ class PantallaPesaje:
         return texto
 
 
-
     def save_weight(self):
-        peso_minimo = 20.00
-        # peso = self.service.get_weight()
-        peso_actual = self.service.get_weight()
-        if peso_actual is None:
-            self.label_alerta.config(text="⚠ Error al Obtener el Peso", fg="red")
-            return
-        # if peso_actual is not None:
-        if self.esperando_vacio:
-            self.label_alerta.config(text="⚠ Cambie de Caja", fg="red")
-            print(" Esperando que la báscula vuelva a cero")
-            return
-
-        if peso_actual < peso_minimo:
-            self.label_alerta.config(text="⚠ Peso insuficiente", fg="red")
-            return
+        registro, mensaje = self.controller.guardar_peso()
+        if registro:
+            self.label_peso.config(text=f"{registro['cantidad']:.2f}")
+            self.label_hora.config(text="Hora: " + registro["hora"].strftime("%H:%M:%S"))
+            self.label_alerta.config(text=mensaje, fg="green")
+        else:
+            self.label_alerta.config(text=mensaje, fg="red")
 
 
-        self.label_peso.config(text=f"{peso_actual:.2f}")
-        self.label_hora.config(text="Hora: " + datetime.now().strftime("%H:%M:%S"))
-        self.label_alerta.config(text="Peso Guardado", fg="green")
-        self.esperando_vacio = True
+    # def save_weight(self):
+    #     peso, mensaje = self.controller.pesar()
+    #     if peso:
+    #         self.label_peso.config(text=f"{peso:.2f}")
+    #         self.label_hora.config(text="Hora: " + datetime.now().strftime("%H:%M:%S"))
+    #         self.label_alerta.config(text=mensaje, fg="green")
+    #     else:
+    #         self.label_alerta.config(text=mensaje, fg="red")
+
+
+    # def save_weight(self):
+    #     peso_minimo = 20.00
+    #     # peso = self.service.get_weight()
+    #     peso_actual = self.service.get_weight()
+    #     if peso_actual is None:
+    #         self.label_alerta.config(text="⚠ Error al Obtener el Peso", fg="red")
+    #         return
+    #     # if peso_actual is not None:
+    #     if self.esperando_vacio:
+    #         self.label_alerta.config(text="⚠ Cambie de Caja", fg="red")
+    #         print(" Esperando que la báscula vuelva a cero")
+    #         return
+
+    #     if peso_actual < peso_minimo:
+    #         self.label_alerta.config(text="⚠ Peso insuficiente", fg="red")
+    #         return
+
+
+    #     self.label_peso.config(text=f"{peso_actual:.2f}")
+    #     self.label_hora.config(text="Hora: " + datetime.now().strftime("%H:%M:%S"))
+    #     self.label_alerta.config(text="Peso Guardado", fg="green")
+    #     self.esperando_vacio = True
 
 
     def actualizar_peso(self):
         peso_actual = self.controller.scale_service.get_weight()
+        # print(f"peso_actual: {peso_actual}")
         self.controller.resetear_espera(peso_actual)
         self.root.after(100, self.actualizar_peso)
 
