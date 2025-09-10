@@ -24,3 +24,10 @@ class CloudCartaCorteRepository:
         data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/pesaje/peso-indicado/{self.svp_client.localidad_id}",  verify=False)
         return data or []
     
+    def replicate_cut_off_weights(self, weights, location):
+        data = self.svp_client.request("POST", f"http://127.0.0.1:8001/api/produccion/pesaje/carta-corte-replicar-pesos",
+                                       {
+                                          'pesos': weights,
+                                          'localidad_id': location
+                                       }, verify=False)
+        return data

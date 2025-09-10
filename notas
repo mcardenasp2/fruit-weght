@@ -1,0 +1,18 @@
+-- Extensión recomendada
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Agregar el campo uuid
+ALTER TABLE public.pe_pesos
+ADD COLUMN uuid UUID DEFAULT gen_random_uuid();
+
+-- Rellenar los UUID faltantes (para registros existentes)
+UPDATE public.pe_pesos
+SET uuid = gen_random_uuid()
+WHERE uuid IS NULL;
+
+-- Hacerlo NOT NULL y único
+ALTER TABLE public.pe_pesos
+ALTER COLUMN uuid SET NOT NULL;
+
+ALTER TABLE public.pe_pesos
+ADD CONSTRAINT pe_pesos_uuid_unique UNIQUE (uuid);

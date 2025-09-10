@@ -19,12 +19,10 @@ class CajaRepository:
     
 
     def create_box(self, caja, calidad_id):
-        print(f"caja: {caja}, calidad: {calidad_id}")
         query = """
             INSERT INTO cajas (descripcion, calidad_id, estado)
             VALUES (%s, %s, 1)
         """
-        print(query)
         self.db.execute(query, (caja, calidad_id))
 
 

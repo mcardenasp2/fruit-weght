@@ -54,58 +54,9 @@ class PantallaPesaje:
 
         self.esperando_vacio = False
 
-        # self.service = ScaleService()
-        # self.service.start()
-
-        # self.cloud_service = CloudSyncCartaCorteService()
-
-        # self.carta_corte_service = CartaCorteService()
-
-        # # intento sincronizar cloud -> local
-        # try:
-        #     print("[INFO] Iniciando sincronización cloud...")
-        #     self.cloud_service.sync_all()
-        # except Exception as e:
-        #     print(f"[INFO] Sincronización cloud no disponible {e}")
-
-        # Obtener datos de corte Detalle
-        # self.cajas = self.carta_corte_service.get_cut_off_letter_details()
-
-        # self.cajas = [CutOffLetterLocalMapper.from_cut_off_letter_detail_local(r) for r in self.cajas]
-
-
-
-        self.cajas = []
-        print(f"cajas: {self.cajas}")
-
-
         self.index_caja = 0
 
-        
-
-
-        if SIMULACION:
-            print("Simulación de botón activada")
-            self.boton = MockButton()
-        else:
-            self.boton = Button(17)
-
-        self.boton.when_pressed = self.save_weight
-        # self.boton.when_press_the_left_button = self.change_box
-        # self.boton.when_press_the_right_button = self.change_box
-
-        
-
-
         self.root = tk.Tk()
-        # Tecla espacio -> simula botón
-        # self.root.bind("<space>", lambda e: self.boton.press())
-
-                # Flecha izquierda -> hacer algo
-        # self.root.bind("<Left>", lambda e: self.update_box(-1))
-        # self.root.bind("<Right>", lambda e: self.update_box(1))
-        # self.root.bind("<Escape>", lambda e: self.root.destroy())
-
 
         self.root.title("Pantalla de Pesaje")
         self.root.configure(bg="black")
@@ -118,9 +69,6 @@ class PantallaPesaje:
         # ====== Texto de la caja ======
         texto_caja = "SELVATICA SUPREME COMPAGNIE FRUITIERE (40.79) SIN ETIQUETA"
         texto_caja = self.truncar_texto(texto_caja, 40)  # aumenté el límite
-
-         # Mostrar primera caja
-        # texto_caja = self.obtener_nombre_caja()
 
         font_size = 70
         self.label_caja = tk.Label(
@@ -153,15 +101,14 @@ class PantallaPesaje:
         )
         self.label_minimo_text.pack()
 
-        # peso_minimo_valor =  self.obtener_peso_minimo()
-
         self.label_minimo_valor = tk.Label(
             frame_izquierda,
-            text='',
+            text='0.00',
             font=("Arial", 170, "bold"),
             fg="yellow",
             bg="black"
         )
+        
         self.label_minimo_valor.pack()
 
         # ====== Columna derecha -> Último peso + hora ======
@@ -205,12 +152,8 @@ class PantallaPesaje:
         # Mostrar la primera caja
         self.update_box(0)
 
-
         self.actualizar_peso()
 
-
-        # Salida con ESC
-        # self.root.bind("<Escape>", lambda e: self.root.destroy())
 
     def truncar_texto(self, texto, max_chars=60):
         if len(texto) > max_chars:
@@ -228,78 +171,11 @@ class PantallaPesaje:
             self.label_alerta.config(text=mensaje, fg="red")
 
 
-    # def save_weight(self):
-    #     peso, mensaje = self.controller.pesar()
-    #     if peso:
-    #         self.label_peso.config(text=f"{peso:.2f}")
-    #         self.label_hora.config(text="Hora: " + datetime.now().strftime("%H:%M:%S"))
-    #         self.label_alerta.config(text=mensaje, fg="green")
-    #     else:
-    #         self.label_alerta.config(text=mensaje, fg="red")
-
-
-    # def save_weight(self):
-    #     peso_minimo = 20.00
-    #     # peso = self.service.get_weight()
-    #     peso_actual = self.service.get_weight()
-    #     if peso_actual is None:
-    #         self.label_alerta.config(text="⚠ Error al Obtener el Peso", fg="red")
-    #         return
-    #     # if peso_actual is not None:
-    #     if self.esperando_vacio:
-    #         self.label_alerta.config(text="⚠ Cambie de Caja", fg="red")
-    #         print(" Esperando que la báscula vuelva a cero")
-    #         return
-
-    #     if peso_actual < peso_minimo:
-    #         self.label_alerta.config(text="⚠ Peso insuficiente", fg="red")
-    #         return
-
-
-    #     self.label_peso.config(text=f"{peso_actual:.2f}")
-    #     self.label_hora.config(text="Hora: " + datetime.now().strftime("%H:%M:%S"))
-    #     self.label_alerta.config(text="Peso Guardado", fg="green")
-    #     self.esperando_vacio = True
-
-
     def actualizar_peso(self):
         peso_actual = self.controller.scale_service.get_weight()
-        # print(f"peso_actual: {peso_actual}")
         self.controller.resetear_espera(peso_actual)
         self.root.after(100, self.actualizar_peso)
 
-    # def actualizar_peso(self):
-    #     peso_minimo = 20.0
-    #     peso_vacio = 1.0  # tolerancia para considerar cero
-    #     peso_actual = self.service.get_weight()
-
-    #     if peso_actual is not None and self.esperando_vacio:
-    #         if peso_actual < peso_vacio:
-    #             self.esperando_vacio = False
-    #             # Aquí opcionalmente podrías mostrar un mensaje temporal en UI
-    #             # self.label_alerta.config(text="Báscula lista", fg="lime")
-
-    #     # Repite cada 100 ms
-    #     self.root.after(100, self.actualizar_peso)
-
-
-    # def caja_actual(self):
-    #     """Devuelve la caja actual o None si no hay cajas."""
-    #     if not self.cajas:
-    #         return None
-    #     return self.cajas[self.index_caja]
-    
-
-    # def obtener_nombre_caja(self):
-    #     caja = self.caja_actual()
-    #     if not caja:
-    #         return "SIN CAJAS DISPONIBLES"
-    #     return self.truncar_texto(caja["caja"], 40)
-
-    # def obtener_peso_minimo(self):
-    #     caja = self.caja_actual()
-    #     return caja["peso_minimo"] if caja else "0.0"
-    
 
     def update_box(self, step):
         caja = self.controller.cambiar_caja(step)
@@ -311,22 +187,6 @@ class PantallaPesaje:
             self.label_caja.config(text="SIN CAJAS DISPONIBLES")
             self.label_minimo_valor.config(text="0.0")
 
-
-    # def change_box(self, type=None):
-    #     if not self.cajas:  # Lista vacía
-    #         self.label_caja.config(text="SIN CAJAS DISPONIBLES")
-    #         self.label_minimo_valor.config(text="0.0")
-    #         return
-
-    #     # Determinar dirección según el tipo (default avanzar)
-    #     step = 1 if type == "sumar" else -1
-
-    #     # Actualizar índice de forma cíclica
-    #     self.index_caja = (self.index_caja + step) % len(self.cajas)
-
-    #     # Refrescar labels
-    #     self.label_caja.config(text=self.obtener_nombre_caja())
-    #     self.label_minimo_valor.config(text=self.obtener_peso_minimo())
 
 
     def run(self):

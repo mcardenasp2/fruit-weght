@@ -44,8 +44,7 @@ class PesajeController:
 
         return peso, "OK"
 
-        self.esperando_vacio = True
-        return peso, "Peso Guardado"
+
 
     def guardar_peso(self):
         """Valida, guarda en DB y retorna info lista para UI"""

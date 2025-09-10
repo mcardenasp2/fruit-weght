@@ -1,6 +1,8 @@
 
 from app.db.database import Database
 
+from datetime import date, timedelta
+
 class CartaCorteRepository:
     def __init__(self):
         self.db = Database()
@@ -113,5 +115,59 @@ class CartaCorteRepository:
             """
         data = self.db.execute(query, (corte_detalle_id, cantidad, fecha, hora), fetch=True)
         return data[0] if data else None
+    
+
+    def get_data_to_replicate(self, tipo, fecha_str=None):
+        """
+        Obtiene datos pendientes de replicar según tipo:
+        - tipo="actual": solo registros del día actual
+        - tipo="historico": registros anteriores a hoy (o fecha_str si se pasa)
+        """
+        base_query = """
+            SELECT 
+                pp.id peso_id,
+                pce.fecha corte_fecha,
+                pce.hora corte_hora,
+                c.descripcion caja,
+                cc.descripcion calidad_caja,
+                pcd.cantidad cantidad_cajas,
+                ppi.peso_maximo,
+                ppi.peso_minimo,
+                ppi.peso_ideal,
+                ppi.tara,
+                pp.cantidad peso,
+                pp.fecha,
+                pp.hora,
+                pp.uuid
+            FROM public.pe_pesos pp 
+            JOIN public.pe_cortes_detalles pcd ON pcd.id = pp.corte_detalle_id 
+            JOIN public.pe_pesos_indicados ppi ON ppi.id = pcd.peso_indicado_id 
+            JOIN public.pe_cortes_encabezados pce ON pce.id = pcd.corte_encabezado_id 
+            JOIN public.cajas c ON c.id = ppi.caja_id 
+            JOIN public.calidad_cajas cc ON cc.id = c.calidad_id 
+            WHERE pp.replicado = 0
+        """
+
+        params = []
+
+        if tipo == "actual":
+            # Fecha actual
+            if not fecha_str:
+                fecha_str = date.today().strftime("%Y-%m-%d")
+            base_query += " AND pp.fecha = %s"
+            params.append(fecha_str)
+
+        elif tipo == "historico":
+            # Fechas anteriores a hoy
+            if not fecha_str:
+                fecha_str = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+            base_query += " AND pp.fecha <= %s"
+            params.append(fecha_str)
+
+        # Limitar cantidad de registros por lote
+        base_query += " ORDER BY pp.fecha, pp.hora LIMIT 200"
+
+        data = self.db.execute(base_query, tuple(params), fetch=True)
+        return data if data else []
     
     

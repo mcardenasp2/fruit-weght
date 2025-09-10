@@ -140,10 +140,6 @@ class CloudSyncCartaCorteService:
 
 
 
-        
-
-                    
-
     def sync_indicated_weight(self):
         peso_indicados_cloud = self.cloud_carta_corte_repo.get_indicated_weight()
         peso_indicados_local = self.peso_indicado_repo.get_indicated_weight()
@@ -247,12 +243,10 @@ class CloudSyncCartaCorteService:
         print("Sincronizando carta de corte...")
         ahora = datetime.now()
         fecha_str = ahora.strftime("%Y-%m-%d")
-        hora_str = ahora.strftime("%H:%M:%S")
 
         cutting_chart_detail_cloud = self.cloud_carta_corte_repo.get_cutting_letter_header(fecha_str)
         cutting_chart_detail_cloud = [CutOffLetterCloudMapper.from_get_cutting_letter_header_cloud(r) for r in cutting_chart_detail_cloud]
-        # print(f"cutting_chart_detail_cloud: {cutting_chart_detail_cloud}")
-        # return 
+ 
         cutting_chart_detail_local = self.carta_corte_repo.get_cut_off_letter_details(fecha_str)
         cutting_chart_detail_local = [CutOffLetterLocalMapper.from_cut_off_letter_detail_local(r) for r in cutting_chart_detail_local]
 
@@ -272,36 +266,6 @@ class CloudSyncCartaCorteService:
                     hora = cutting_chart_detail_cloud[0]["hora"]
                 )
            
-        # cutting_chart_detail_cloud = [
-        #     {
-        #         "caja": row["caja"],
-        #         "calidad_caja" : row["calidad_caja"],
-        #         "cantidad" : row["cantidad"],
-        #         "fecha" : row["fecha"],
-        #         "hora" : row["hora"],
-        #         "peso_minimo" : row["peso_minimo"],
-        #         "peso_ideal" : row["peso_ideal"],
-        #         "peso_maximo" : row["peso_maximo"],
-        #         "tara" : row["tara"],
-        #     }
-        #     for row in cutting_chart_detail_cloud
-        # ]
-
-        # cutting_chart_detail_local = [
-        #     {
-        #         "corte_detalle_id": row["corte_detalle_id"],
-        #         "caja": row["caja"],
-        #         "calidad_caja" : row["calidad_caja"],
-        #         "cantidad" : row["cantidad"],
-        #         "fecha" : row["fecha"],
-        #         "peso_minimo" : row["peso_minimo"],
-        #         "peso_ideal" : row["peso_ideal"],
-        #         "peso_maximo" : row["peso_maximo"],
-        #         "tara" : row["tara"],
-        #     }
-        #     for row in cutting_chart_detail_local
-        # ]
-
         peso_indicados_local = [
             {
                 "peso_indicado_id": row["peso_indicado_id"],
@@ -361,9 +325,15 @@ class CloudSyncCartaCorteService:
 
     
 
+    def replicate_cut_off_weights(self, type = None):
+        ahora = datetime.now()
+        fecha_str = ahora.strftime("%Y-%m-%d")
+        data = self.carta_corte_repo.get_data_to_replicate(tipo= type, fecha_str=fecha_str)
+        
+
+
 
     def sync_all(self):
-        # pass
         self.sync_quality_boxes()
         self.sync_boxes()
         self.sync_indicated_weight()
