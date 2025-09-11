@@ -4,10 +4,9 @@ from app.repositories.carta_corte_repository import CartaCorteRepository
 from app.repositories.calidad_caja_repository import CalidadCajaRepository
 from app.repositories.caja_repository import CajaRepository
 from app.repositories.peso_indicado_repository import PesoIndicadoRepository
-from psycopg2.extras import RealDictCursor
-from psycopg2.extras import RealDictRow
-from app.mappers.cut_off_letter_local_mapper import CutOffLetterLocalMapper
-from app.mappers.cut_off_letter_cloud_mapper import CutOffLetterCloudMapper
+from app.mappers.cut_off_letter_mapper import CutOffLetterMapper
+from app.mappers.box_mapper import BoxMapper
+from app.mappers.indicated_weight_mapper import IndicatedWeight
 
 from datetime import datetime
 
@@ -31,27 +30,15 @@ class CloudSyncCartaCorteService:
 
     def sync_quality_boxes(self):
         quality_boxes_cloud = self.cloud_carta_corte_repo.get_all_quality_boxes()
+        quality_boxes_cloud = [BoxMapper.from_quality_boxes_cloud(r) for r in quality_boxes_cloud]
+
         quality_boxes_local = self.calidad_cajas_repo.get_all_quality_boxes()
+        quality_boxes_local = [BoxMapper.from_quality_boxes_local(r) for r in quality_boxes_local]
 
 
         if quality_boxes_cloud:
             # actualizar el estado de todos a 0
             self.calidad_cajas_repo.update_quality_boxes_all()
-
-        quality_boxes_local = [
-            {
-                "id": row["id"],
-                "descripcion": row["descripcion"],
-                "observacion": row["observacion"] or "",
-                "estado": row["estado"]
-            }
-            for row in quality_boxes_local
-        ]
-
-        quality_boxes_cloud = [
-            {**row, "observacion": row.get("observacion") or ""}
-            for row in quality_boxes_cloud
-        ]
 
         for cloud in quality_boxes_cloud:
             match = next(
@@ -71,39 +58,21 @@ class CloudSyncCartaCorteService:
                     observacion=cloud["observacion"]
                 )
 
-        print("Termina sincronizacion calidad Cajas")
+        print("Termina sincronizacion calidad Cajas d")
 
 
 
 
     def sync_boxes(self):
         cajas_cloud = self.cloud_carta_corte_repo.boxes_by_location()
+        cajas_cloud = [BoxMapper.from_box_cloud(r) for r in cajas_cloud]
 
         calidad_cajas_local = self.calidad_cajas_repo.get_all_quality_boxes()
+        calidad_cajas_local = [BoxMapper.from_quality_boxes_local(r) for r in calidad_cajas_local]
+        
+
         cajas_local = self.caja_repo.get_all_boxes()
-
-        cajas_cloud = [
-            {**row}
-            for row in cajas_cloud
-        ]
-
-        calidad_cajas_local = [
-            {
-                "id": row["id"],
-                "descripcion": row["descripcion"]
-            }
-            for row in calidad_cajas_local
-        ]
-
-        cajas_local = [
-            {
-                "id": row["id"],
-                "descripcion": row["descripcion"],
-                "calidad_caja": row["calidad_caja"],
-                "calidad_caja_id": row["calidad_caja_id"]
-            }
-            for row in cajas_local
-        ]
+        cajas_local = [BoxMapper.from_box_local(r) for r in cajas_local]
 
         if cajas_cloud:
             self.caja_repo.update_status_boxes_all()
@@ -142,56 +111,18 @@ class CloudSyncCartaCorteService:
 
     def sync_indicated_weight(self):
         peso_indicados_cloud = self.cloud_carta_corte_repo.get_indicated_weight()
+        peso_indicados_cloud = [IndicatedWeight.from_indicated_weight_cloud(r) for r in peso_indicados_cloud]
+
         peso_indicados_local = self.peso_indicado_repo.get_indicated_weight()
+        peso_indicados_local = [IndicatedWeight.from_indicated_weight_local(r) for r in peso_indicados_local]
 
         
         cajas_local = self.caja_repo.get_all_boxes()
-
-        cajas_local = [
-            {
-                "id": row["id"],
-                "descripcion": row["descripcion"],
-                "calidad_caja": row["calidad_caja"],
-            }
-            for row in cajas_local
-        ]
+        cajas_local = [BoxMapper.from_box_local(r) for r in cajas_local]
 
 
         if peso_indicados_cloud:
             self.peso_indicado_repo.update_status_indicated_weights_all()
-
-        peso_indicados_cloud = [
-            {
-                "caja": row["caja"]["descripcion"],
-                "peso_minimo": row["peso_minimo"],
-                "peso_ideal": row["peso_ideal"],
-                "peso_maximo": row["peso_maximo"],
-                "calidad_caja": row["caja"]["calidad"]["descripcion"],
-                "tara": row["tara"]
-            }
-            for row in peso_indicados_cloud
-        ]
-
-        
-
-        
-
-        peso_indicados_local = [
-            {
-                "peso_indicado_id": row["peso_indicado_id"],
-                "caja": row["caja"],
-                "peso_minimo": row["peso_minimo"],
-                "peso_ideal": row["peso_ideal"],
-                "peso_maximo": row["peso_maximo"],
-                "calidad_caja": row["calidad_caja"],
-                "tara": row["tara"]
-            }
-            for row in peso_indicados_local
-        ]
-
-        
-
-     
 
         # ver si se cambia el estado a todos a cero 
         for cloud in peso_indicados_cloud:
@@ -245,12 +176,13 @@ class CloudSyncCartaCorteService:
         fecha_str = ahora.strftime("%Y-%m-%d")
 
         cutting_chart_detail_cloud = self.cloud_carta_corte_repo.get_cutting_letter_header(fecha_str)
-        cutting_chart_detail_cloud = [CutOffLetterCloudMapper.from_get_cutting_letter_header_cloud(r) for r in cutting_chart_detail_cloud]
+        cutting_chart_detail_cloud = [CutOffLetterMapper.from_get_cutting_letter_header_cloud(r) for r in cutting_chart_detail_cloud]
  
         cutting_chart_detail_local = self.carta_corte_repo.get_cut_off_letter_details(fecha_str)
-        cutting_chart_detail_local = [CutOffLetterLocalMapper.from_cut_off_letter_detail_local(r) for r in cutting_chart_detail_local]
+        cutting_chart_detail_local = [CutOffLetterMapper.from_cut_off_letter_detail_local(r) for r in cutting_chart_detail_local]
 
         peso_indicados_local = self.peso_indicado_repo.get_indicated_weight()
+        peso_indicados_local = [IndicatedWeight.from_indicated_weight_local(r) for r in peso_indicados_local]
 
         cut_off_letter = self.carta_corte_repo.get_cut_off_letter(fecha_str)
 
@@ -266,18 +198,6 @@ class CloudSyncCartaCorteService:
                     hora = cutting_chart_detail_cloud[0]["hora"]
                 )
            
-        peso_indicados_local = [
-            {
-                "peso_indicado_id": row["peso_indicado_id"],
-                "caja": row["caja"],
-                "peso_minimo": row["peso_minimo"],
-                "peso_ideal": row["peso_ideal"],
-                "peso_maximo": row["peso_maximo"],
-                "calidad_caja": row["calidad_caja"],
-                "tara": row["tara"]
-            }
-            for row in peso_indicados_local
-        ]
         for cloud in cutting_chart_detail_cloud:
             match = next(
                 (
@@ -328,9 +248,13 @@ class CloudSyncCartaCorteService:
     def replicate_cut_off_weights(self, type = None):
         ahora = datetime.now()
         fecha_str = ahora.strftime("%Y-%m-%d")
-        data = self.carta_corte_repo.get_data_to_replicate(tipo= type, fecha_str=fecha_str)
-        
+        data = self.carta_corte_repo.get_data_to_replicate(tipo = type, fecha_str=fecha_str)
 
+        if data:
+            ids = self.cloud_carta_corte_repo.replicate_cut_off_weights(data)
+            if ids:
+                self.carta_corte_repo.update_replicated_weight_status(ids)
+        
 
 
     def sync_all(self):

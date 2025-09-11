@@ -3,7 +3,7 @@ import time
 from datetime import date
 
 class ReplicatorService:
-    def __init__(self, cloud_service, interval_today=5, interval_history=300):
+    def __init__(self, cloud_service, interval_today=5, interval_history=60):
         """
         :param cloud_service: instancia de CloudSyncCartaCorteService
         :param interval_today: segundos entre replicaciones de hoy
@@ -35,7 +35,6 @@ class ReplicatorService:
                 try:
                     print("[INFO] Replicando datos de HOY...")
                     self.cloud_service.replicate_cut_off_weights('actual')
-                    # self.cloud_service.sync_by_date(date.today())
                 except Exception as e:
                     print(f"[ERROR] Replicación HOY fallida: {e}")
                 finally:
@@ -50,7 +49,6 @@ class ReplicatorService:
                 try:
                     print("[INFO] Replicando HISTÓRICO...")
                     self.cloud_service.replicate_cut_off_weights('historico')
-                    # self.cloud_service.sync_pending()
                 except Exception as e:
                     print(f"[ERROR] Replicación HISTÓRICA fallida: {e}")
                 finally:

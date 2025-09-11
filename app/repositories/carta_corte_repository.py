@@ -170,4 +170,13 @@ class CartaCorteRepository:
         data = self.db.execute(base_query, tuple(params), fetch=True)
         return data if data else []
     
+
+    def update_replicated_weight_status(self, ids):
+        query = """
+            UPDATE pe_pesos
+            SET replicado = 1
+            WHERE id = ANY(%s)
+        """
+        self.db.execute(query, (ids,))
+    
     

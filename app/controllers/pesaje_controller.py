@@ -65,6 +65,7 @@ class PesajeController:
         )
 
         self.esperando_vacio = True
+        # self.esperando_vacio = False
 
         return registro, "✅ Peso guardado"
             

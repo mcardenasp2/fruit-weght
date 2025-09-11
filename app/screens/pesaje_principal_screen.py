@@ -1,11 +1,5 @@
 import tkinter as tk
-from datetime import datetime
-import random
-from app.services.scale_service import ScaleService
-from app.clients.svp_client import SvpClient
-from app.services.cloud_sync_carta_corte_service import CloudSyncCartaCorteService
-from app.services.carta_corte_service import CartaCorteService
-from app.mappers.cut_off_letter_local_mapper import CutOffLetterLocalMapper
+
 
 # Detección de simulación
 try:
@@ -52,10 +46,6 @@ class PantallaPesaje:
 
         self.controller = controller
 
-        self.esperando_vacio = False
-
-        self.index_caja = 0
-
         self.root = tk.Tk()
 
         self.root.title("Pantalla de Pesaje")
@@ -66,9 +56,6 @@ class PantallaPesaje:
         self.frame_superior = tk.Frame(self.root, bg="black")
         self.frame_superior.place(relx=0, rely=0, relwidth=1, relheight=0.3)
 
-        # ====== Texto de la caja ======
-        texto_caja = "SELVATICA SUPREME COMPAGNIE FRUITIERE (40.79) SIN ETIQUETA"
-        texto_caja = self.truncar_texto(texto_caja, 40)  # aumenté el límite
 
         font_size = 70
         self.label_caja = tk.Label(

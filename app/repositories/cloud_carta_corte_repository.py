@@ -1,4 +1,5 @@
 from app.clients.svp_client import SvpClient
+from app.mappers.box_mapper import BoxMapper
 
 class CloudCartaCorteRepository:
     def __init__(self, client : SvpClient):
@@ -24,10 +25,30 @@ class CloudCartaCorteRepository:
         data = self.svp_client.request("GET", f"http://127.0.0.1:8001/api/produccion/pesaje/peso-indicado/{self.svp_client.localidad_id}",  verify=False)
         return data or []
     
-    def replicate_cut_off_weights(self, weights, location):
-        data = self.svp_client.request("POST", f"http://127.0.0.1:8001/api/produccion/pesaje/carta-corte-replicar-pesos",
-                                       {
-                                          'pesos': weights,
-                                          'localidad_id': location
-                                       }, verify=False)
-        return data
+    def replicate_cut_off_weights(self, weights):
+        location = self.svp_client.localidad_id
+        print(f"Antes de Base")
+        weights = [BoxMapper.serialize_weight(r) for r in weights]
+        print({
+                "pesos": weights,
+                "localidad_id": location,
+            })
+        data = self.svp_client.request(
+            "POST",
+            "http://127.0.0.1:8001/api/produccion/pesaje/carta-corte-replicar-pesos",
+            json={
+                "pesos": weights,
+                "localidad_id": location,
+            },
+            verify=False
+        )
+        print("Respuesta completa del servidor:", data)
+
+        # Verificar que la request fue exitosa y que trae los ids
+        if data and data.get("success") and "ids" in data:
+            print("IDs recibidos:", data["ids"])
+            return data["ids"]
+
+        # Si algo falla, retornar lista vacía
+        print("No se recibieron ids o la request falló")
+        return []

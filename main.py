@@ -7,12 +7,12 @@ from app.services.replicator_service import ReplicatorService
 
 def main():
     scale = ScaleService()
-    # scale.start() 
+    scale.start() 
     carta = CartaCorteService()
     cloud = CloudSyncCartaCorteService()
 
-    # Replicador: hoy cada 5s, histórico cada 10 minutos
-    replicator = ReplicatorService(cloud, interval_today=5, interval_history=600)
+    # Replicador: hoy cada 5s, histórico cada minuto
+    replicator = ReplicatorService(cloud, interval_today=5, interval_history=60)
     replicator.start()
 
     controller = PesajeController(scale, carta, cloud)
